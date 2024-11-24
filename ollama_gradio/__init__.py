@@ -91,7 +91,7 @@ def get_pipeline(model_name):
     return "chat"
 
 
-def registry(name: str, token: str = None, **kwargs):
+def registry(name: str, *args, token: str = None, **kwargs):
     """
     Create a Gradio Interface for an Ollama model.
 
