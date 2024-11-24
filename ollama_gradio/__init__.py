@@ -17,9 +17,10 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
         )
         response_text = ""
         for chunk in stream:
-            delta = chunk['message']['content']
-            response_text += delta
-            yield postprocess(response_text)
+            if 'message' in chunk and 'content' in chunk['message']:
+                delta = chunk['message']['content']
+                response_text += delta
+                yield postprocess(response_text)
 
     return fn
 
@@ -91,15 +92,21 @@ def get_pipeline(model_name):
     return "chat"
 
 
-def registry(name: str, *args, token: str = None, **kwargs):
+def registry(name: str, token: str | None = None, **kwargs):
     """
     Create a Gradio Interface for an Ollama model.
+    This function matches the signature expected by gr.load().
 
     Parameters:
         - name (str): The name of the Ollama model to run locally
-        - token (str, optional): Unused parameter, only present for gr.load() compatibility 
-                               since Ollama runs models locally
+        - token (str | None): Unused parameter, required for gr.load() compatibility 
+                            since Ollama runs models locally
+        - **kwargs: Additional keyword arguments passed to the interface
     """
+    # If name includes the src prefix (e.g., "ollama/model-name"), strip it
+    if "/" in name:
+        _, name = name.split("/", 1)
+
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
     fn = get_fn(name, preprocess, postprocess)
