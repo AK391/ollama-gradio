@@ -1,90 +1,78 @@
-# `openai-gradio`
+# `ollama-gradio`
 
-is a Python package that makes it very easy for developers to create machine learning apps that are powered by OpenAI's API.
+is a Python package that makes it very easy for developers to create machine learning apps that are powered by Ollama models.
 
 # Installation
 
-You can install `openai-gradio` directly using pip:
+You can install `ollama-gradio` directly using pip:
 
 ```bash
-pip install openai-gradio
+pip install ollama-gradio
 ```
 
 That's it! 
 
 # Basic Usage
 
-Just like if you were to use the `openai` API, you should first save your OpenAI API key to this environment variable:
-
-```
-export OPENAI_API_KEY=<your token>
-```
-
-Then in a Python file, write:
+Make sure you have Ollama installed and running locally. Then in a Python file, write:
 
 ```python
 import gradio as gr
-import openai_gradio
+import ollama_gradio
 
 gr.load(
-    name='gpt-4-turbo',
-    src=openai_gradio.registry,
+    name='llama2',  # or any other Ollama model
+    src=ollama_gradio.registry,
 ).launch()
 ```
 
-Run the Python file, and you should see a Gradio Interface connected to the model on OpenAI!
+Run the Python file, and you should see a Gradio Interface connected to your local Ollama model!
 
 ![ChatInterface](chatinterface.png)
 
 # Customization 
 
-Once you can create a Gradio UI from an OpenAI endpoint, you can customize it by setting your own input and output components, or any other arguments to `gr.Interface`. For example, the screenshot below was generated with:
-
-```py
-import gradio as gr
-import openai_gradio
-
-gr.load(
-    name='gpt-4-turbo',
-    src=openai_gradio.registry,
-    title='OpenAI-Gradio Integration',
-    description="Chat with GPT-4-turbo model.",
-    examples=["Explain quantum gravity to a 5-year old.", "How many R are there in the word Strawberry?"]
-).launch()
-```
-![ChatInterface with customizations](chatinterface_with_customization.png)
-
-# Composition
-
-Or use your loaded Interface within larger Gradio Web UIs, e.g.
+You can customize the Gradio UI by setting your own title, description, examples, or any other arguments supported by `gr.ChatInterface`. For example:
 
 ```python
 import gradio as gr
-import openai_gradio
+import ollama_gradio
+
+gr.load(
+    name='llama2',
+    src=ollama_gradio.registry,
+    title='Ollama-Gradio Integration',
+    description="Chat with local LLMs using Ollama",
+    examples=["Explain quantum gravity to a 5-year old.", "How many R are there in the word Strawberry?"]
+).launch()
+```
+
+# Composition
+
+You can use multiple Ollama models within larger Gradio Web UIs, e.g.
+
+```python
+import gradio as gr
+import ollama_gradio
 
 with gr.Blocks() as demo:
-    with gr.Tab("GPT-4-turbo"):
-        gr.load('gpt-4-turbo', src=openai_gradio.registry)
-    with gr.Tab("GPT-3.5-turbo"):
-        gr.load('gpt-3.5-turbo', src=openai_gradio.registry)
+    with gr.Tab("llama2"):
+        gr.load('llama2', src=ollama_gradio.registry)
+    with gr.Tab("mistral"):
+        gr.load('mistral', src=ollama_gradio.registry)
 
 demo.launch()
 ```
 
-# Under the Hood
+# Features
 
-The `openai-gradio` Python library has two dependencies: `openai` and `gradio`. It defines a "registry" function `openai_gradio.registry`, which takes in a model name and returns a Gradio app.
+- Chat interface with streaming responses
+- Support for multimodal inputs (text and images)
+- Compatible with all Ollama models
+- Easy integration with larger Gradio applications
 
-# Supported Models in OpenAI
+# Supported Models
 
-All chat API models supported by OpenAI are compatible with this integration. For a comprehensive list of available models and their specifications, please refer to the [OpenAI Models documentation](https://platform.openai.com/docs/models).
+All models available through Ollama are compatible with this integration. You can use any model that you've pulled to your local Ollama installation.
 
--------
-
-Note: if you are getting a 401 authentication error, then the OpenAI API Client is not able to get the API token from the environment variable. This happened to me as well, in which case save it in your Python session, like this:
-
-```py
-import os
-
-os.environ["OPENAI_API_KEY"] = ...
-```
+To see available models or pull new ones, refer to the [Ollama documentation](https://github.com/ollama/ollama).

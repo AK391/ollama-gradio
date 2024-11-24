@@ -1,24 +1,23 @@
 import os
-from openai import OpenAI
 import gradio as gr
 from typing import Callable
 import base64
+import ollama
 
 __version__ = "0.0.3"
 
 
-def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
+def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
     def fn(message, history):
         inputs = preprocess(message, history)
-        client = OpenAI(api_key=api_key)
-        completion = client.chat.completions.create(
+        stream = ollama.chat(
             model=model_name,
             messages=inputs["messages"],
             stream=True,
         )
         response_text = ""
-        for chunk in completion:
-            delta = chunk.choices[0].delta.content or ""
+        for chunk in stream:
+            delta = chunk['message']['content']
             response_text += delta
             yield postprocess(response_text)
 
@@ -92,21 +91,16 @@ def get_pipeline(model_name):
     return "chat"
 
 
-def registry(name: str, token: str | None = None, **kwargs):
+def registry(name: str, **kwargs):
     """
-    Create a Gradio Interface for a model on OpenAI.
+    Create a Gradio Interface for an Ollama model.
 
     Parameters:
-        - name (str): The name of the OpenAI model.
-        - token (str, optional): The API key for OpenAI.
+        - name (str): The name of the Ollama model
     """
-    api_key = token or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is not set.")
-
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
-    fn = get_fn(name, preprocess, postprocess, api_key)
+    fn = get_fn(name, preprocess, postprocess)
 
     if pipeline == "chat":
         interface = gr.ChatInterface(fn=fn, multimodal=True, **kwargs)

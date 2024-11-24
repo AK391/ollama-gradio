@@ -1,7 +1,7 @@
 import gradio as gr
-import openai_gradio
+import ollama_gradio
 
 gr.load(
-    name='gpt-4o-2024-11-20',
-    src=openai_gradio.registry,
+    name='llama3.1:8b',
+    src=ollama_gradio.registry,
 ).launch()
