@@ -4,7 +4,7 @@ from typing import Callable
 import base64
 import ollama
 import httpx
-from ollama import AsyncClient
+from ollama import AsyncClient, ResponseError
 
 __version__ = "0.0.3"
 
@@ -15,14 +15,33 @@ async def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
             inputs = preprocess(message, history)
             client = AsyncClient()
             
-            async for chunk in await client.chat(
-                model=model_name,
-                messages=inputs["messages"],
-                stream=True,
-            ):
-                if 'message' in chunk and 'content' in chunk['message']:
-                    delta = chunk['message']['content']
-                    yield postprocess(delta)
+            try:
+                async for chunk in await client.chat(
+                    model=model_name,
+                    messages=inputs["messages"],
+                    stream=True,
+                ):
+                    if 'message' in chunk and 'content' in chunk['message']:
+                        delta = chunk['message']['content']
+                        yield postprocess(delta)
+                        
+            except ResponseError as e:
+                if e.status_code == 404:  # Model not found
+                    yield postprocess(f"Model {model_name} not found locally. Downloading...")
+                    await client.pull(model_name)
+                    yield postprocess(f"Download complete. Retrying chat...")
+                    
+                    # Retry the chat with the newly downloaded model
+                    async for chunk in await client.chat(
+                        model=model_name,
+                        messages=inputs["messages"],
+                        stream=True,
+                    ):
+                        if 'message' in chunk and 'content' in chunk['message']:
+                            delta = chunk['message']['content']
+                            yield postprocess(delta)
+                else:
+                    raise e
                     
         except httpx.ConnectError:
             error_msg = (
