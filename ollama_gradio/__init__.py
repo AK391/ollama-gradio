@@ -91,12 +91,14 @@ def get_pipeline(model_name):
     return "chat"
 
 
-def registry(name: str, **kwargs):
+def registry(name: str, token: str = None, **kwargs):
     """
     Create a Gradio Interface for an Ollama model.
 
     Parameters:
-        - name (str): The name of the Ollama model
+        - name (str): The name of the Ollama model to run locally
+        - token (str, optional): Unused parameter, only present for gr.load() compatibility 
+                               since Ollama runs models locally
     """
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
@@ -105,7 +107,6 @@ def registry(name: str, **kwargs):
     if pipeline == "chat":
         interface = gr.ChatInterface(fn=fn, multimodal=True, **kwargs)
     else:
-        # For other pipelines, create a standard Interface (not implemented yet)
         interface = gr.Interface(fn=fn, inputs=inputs, outputs=outputs, **kwargs)
 
     return interface
