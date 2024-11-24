@@ -3,24 +3,37 @@ import gradio as gr
 from typing import Callable
 import base64
 import ollama
+import httpx
+from ollama import AsyncClient
 
 __version__ = "0.0.3"
 
 
-def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
-    def fn(message, history):
-        inputs = preprocess(message, history)
-        stream = ollama.chat(
-            model=model_name,
-            messages=inputs["messages"],
-            stream=True,
-        )
-        response_text = ""
-        for chunk in stream:
-            if 'message' in chunk and 'content' in chunk['message']:
-                delta = chunk['message']['content']
-                response_text += delta
-                yield postprocess(response_text)
+async def get_fn(model_name: str, preprocess: Callable, postprocess: Callable):
+    async def fn(message, history):
+        try:
+            inputs = preprocess(message, history)
+            client = AsyncClient()
+            
+            async for chunk in await client.chat(
+                model=model_name,
+                messages=inputs["messages"],
+                stream=True,
+            ):
+                if 'message' in chunk and 'content' in chunk['message']:
+                    delta = chunk['message']['content']
+                    yield postprocess(delta)
+                    
+        except httpx.ConnectError:
+            error_msg = (
+                "Could not connect to Ollama server. "
+                "Please make sure Ollama is running and accessible at http://localhost:11434. "
+                "You can start it by running 'ollama serve' in your terminal."
+            )
+            yield postprocess(error_msg)
+        except Exception as e:
+            error_msg = f"An error occurred: {str(e)}"
+            yield postprocess(error_msg)
 
     return fn
 
@@ -109,7 +122,7 @@ def registry(name: str, token: str | None = None, **kwargs):
 
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)
-    fn = get_fn(name, preprocess, postprocess)
+    fn = await get_fn(name, preprocess, postprocess)
 
     if pipeline == "chat":
         interface = gr.ChatInterface(fn=fn, multimodal=True, **kwargs)
